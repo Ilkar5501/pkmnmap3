@@ -843,9 +843,11 @@
     /* Keep roster HP inside its track, and give every move a readable three-line hierarchy. */
     .roster-mon{overflow:hidden;padding:2px 2px 9px}.roster-mon img{display:block}.roster-hp{display:block!important;width:100%;height:5px!important;min-height:5px!important;max-height:5px!important;margin:0;padding:0;border:0;border-radius:4px;background:#d8e0e6;overflow:hidden;line-height:0;font-size:0}.roster-hp i{display:block!important;position:static!important;height:5px!important;min-height:5px!important;max-height:5px!important;margin:0;padding:0;border:0;background:#2f9e56}.roster-mon .roster-hp{position:absolute;left:3px;right:3px;bottom:3px;width:auto}.battle-log{position:relative;z-index:1}
     .battle-actions .move-button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0;min-height:78px;padding:9px 10px!important;text-align:left}.battle-actions .move-name{display:block;width:100%;color:#12213a;font-size:14px;font-weight:900;line-height:1.15}.battle-actions .move-details{display:flex;width:100%;flex-wrap:wrap;gap:2px 7px;color:#405268;font-size:11px;font-weight:800;line-height:1.25;opacity:1}.battle-actions .move-type{color:#273b54;font-weight:900}.battle-actions .move-effectiveness{display:block;width:100%;min-height:14px;color:#526174;font-size:11px;font-weight:900;line-height:1.2}.battle-actions .move-effectiveness.super-effective{color:#157a3d}.battle-actions .move-effectiveness.not-very-effective{color:#a85c00}.battle-actions .move-effectiveness.no-effect{color:#58616c}
+    .battle-log-toolbar{display:none}.battle-log-toggle{border:2px solid #8ba0af;border-radius:7px;background:#fff;color:#172943;padding:6px 10px;font-size:12px;font-weight:900;cursor:pointer}
 
     @media(max-width:900px){:root{--tile:24px}.map-container{height:58vh}.pokemon-card{grid-template-columns:minmax(0,1.2fr) minmax(165px,.7fr)!important}.pc-stats{grid-template-columns:repeat(2,1fr)}.battle-window{max-height:92vh}.battle-rosters{grid-template-columns:1fr}.battle-vs{display:none}.trainer-side.opponent{grid-template-columns:64px 1fr}.trainer-side.opponent .trainer-badge{order:0}.trainer-side.opponent .trainer-caption{text-align:left}.roster-strip{gap:3px}.roster-mon{height:52px}.roster-mon img{height:35px}.battle-actions{grid-template-columns:1fr 1fr}.battle-actions .button{grid-column:1/-1}.duel-mon{grid-template-columns:82px 1fr}.duel-mon.enemy{grid-template-columns:1fr 82px}.duel-mon img{width:78px;height:74px}.records-head{grid-template-columns:1fr}.swap-team-list{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:560px){.pokemon-card{grid-template-columns:minmax(0,1fr) 132px!important;min-height:360px}.pc-card-info{padding:12px}.pc-card-title{display:block}.pc-card-title .pokemon-types{margin-top:7px}.pc-card-title .pokemon-name{font-size:19px}.pc-moves{grid-template-columns:1fr}.pc-card-art img{width:115%;height:80%}.record-row{grid-template-columns:1fr repeat(3,1fr)}.record-pokemon{grid-column:1/-1}.trainer-side{grid-template-columns:48px 1fr}.trainer-side.opponent{grid-template-columns:48px 1fr}.trainer-badge{width:46px;height:46px;font-size:14px}.trainer-badge img{width:45px;height:45px}.duel-stage{gap:5px}.duel-mon{grid-template-columns:1fr!important;text-align:center!important;min-height:135px}.duel-mon.enemy img{order:0}.duel-mon img{width:72px;height:65px;margin:auto}.duel-vs{font-size:12px}.battle-log{height:60px!important;min-height:60px!important}.shop-tabs{overflow-x:auto}.shop-tab{white-space:nowrap;padding:9px 11px}}
+    @media(max-width:900px){.battle-rosters{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:9px}.trainer-side,.trainer-side.opponent{display:grid;grid-template-columns:48px minmax(0,1fr);width:100%;gap:8px;align-items:center}.trainer-side.opponent .trainer-badge{order:-1}.trainer-side.opponent .trainer-caption{text-align:left}.trainer-side>div:not(.trainer-badge){min-width:0}.trainer-caption{margin:0 0 4px;font-size:11px;line-height:1.1}.trainer-badge{width:46px;height:46px;font-size:14px}.trainer-badge img{width:45px;height:45px}.roster-strip{width:100%;min-width:0}.battle-log-toolbar{display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px;color:#42546a;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.battle-log{margin:0 0 8px!important}.battle-log[hidden]{display:none!important}}
 
   </style>
 </head>
@@ -1984,6 +1986,16 @@
     let controlsReady = false;
     let battleRecords = {};
     let pendingSwapName = null;
+    let battleLogCollapsed = false;
+    function toggleBattleLog() {
+      const log = document.getElementById('battle-log');
+      const button = document.getElementById('battle-log-toggle');
+      if (!log || !button) return;
+      battleLogCollapsed = !battleLogCollapsed;
+      log.hidden = battleLogCollapsed;
+      button.textContent = battleLogCollapsed ? 'Show log' : 'Hide log';
+      button.setAttribute('aria-expanded', String(!battleLogCollapsed));
+    }
     function getBattleRecord(name) {
       if (!battleRecords[name]) battleRecords[name] = { damage:0, kos:0, deaths:0 };
       return battleRecords[name];
@@ -2244,6 +2256,7 @@
 
     function openBattleModal(trainer, aiTeam) {
       const modal = document.getElementById('battle-modal');
+      battleLogCollapsed = false;
       document.getElementById('battle-content').innerHTML = `
         <div class="battle-rosters">
           <div class="trainer-side">
@@ -2252,10 +2265,11 @@
           </div>
           <div class="battle-vs">VS</div>
           <div class="trainer-side opponent">
-            <div><div class="trainer-caption">${trainer.name || 'TRAINER'}</div><div class="roster-strip" id="ai-roster"></div></div>
+            <div><div class="trainer-caption">${(trainer.name || 'TRAINER').toUpperCase()}’S TEAM</div><div class="roster-strip" id="ai-roster"></div></div>
             <div class="trainer-badge"><img src="${trainer.icon}" alt="${trainer.name || 'Opponent'}"></div>
           </div>
         </div>
+        <div class="battle-log-toolbar"><span>Battle log</span><button class="battle-log-toggle" id="battle-log-toggle" type="button" onclick="toggleBattleLog()" aria-controls="battle-log" aria-expanded="true">Hide log</button></div>
         <div class="battle-log" id="battle-log"></div>
         <div id="battle-phase"></div>
       `;
